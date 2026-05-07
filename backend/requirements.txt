@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+pillow
+python-dotenv
+aiofiles
+google-genai
+gradio_client
+fashn
+passlib[bcrypt]
+python-jose[cryptography]
+aiosqlite
+fastapi-mail
+google-auth
