@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 import aiosqlite
+from datetime import datetime, timedelta, timezone
 
 from app.database import get_db
 from app.models import (
@@ -18,6 +19,7 @@ from app.services.auth_service import (
     create_access_token,
     create_refresh_token,
     create_reset_token,
+    generate_reset_code,
     decode_token,
 )
 from app.dependencies import get_current_user
@@ -146,42 +148,66 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 # ─── Forgot/Reset Password ──────────────────────────────────────
 
 @auth_router.post("/forgot-password", response_model=MessageResponse)
-async def forgot_password(body: ForgotPasswordRequest, db: aiosqlite.Connection = Depends(get_db)):
-    """Request a password reset link (real email)."""
+async def forgot_password(
+    body: ForgotPasswordRequest, 
+    background_tasks: BackgroundTasks,
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """Request a password reset code. Returns immediately while email sends in background."""
     cursor = await db.execute("SELECT id FROM users WHERE email = ?", (body.email,))
     if not await cursor.fetchone():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No account found with this email address."
-        )
+        # Generic message to avoid email harvesting
+        return {"message": "If an account with that email exists, a reset code has been sent."}
 
-    token = create_reset_token(body.email)
+    code = generate_reset_code()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
     
-    # Send real email
-    try:
-        await email_service.send_reset_password_email(body.email, token)
-        print(f"[OK] Reset email sent to: {body.email}")
-    except Exception as e:
-        print(f"[ERROR] Failed to send email: {e}")
-        # Still return 200 to avoid email harvesting, or 500 if you want to be explicit
-        return {"message": "If an account with that email exists, a reset link has been sent."}
+    # Store code in DB
+    await db.execute(
+        "UPDATE users SET reset_code = ?, reset_code_expires_at = ? WHERE email = ?",
+        (code, expires_at.isoformat(), body.email)
+    )
+    await db.commit()
     
-    return {"message": "Reset link has been sent to your email."}
+    # Send email in background to avoid API timeout
+    async def send_mail_task():
+        try:
+            await email_service.send_reset_password_email(body.email, code)
+            print(f"[OK] Reset code {code} sent to: {body.email}")
+        except Exception as e:
+            print(f"[ERROR] Background email failure: {e}")
+
+    background_tasks.add_task(send_mail_task)
+    
+    return {"message": "Reset code has been sent to your email."}
 
 
 @auth_router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(body: ResetPasswordRequest, db: aiosqlite.Connection = Depends(get_db)):
-    """Reset password using a valid token."""
-    payload = decode_token(body.token)
-    if payload is None or payload.get("type") != "reset" or payload.get("sub") != body.email:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired reset token",
-        )
+    """Reset password using a valid 6-character code."""
+    cursor = await db.execute(
+        "SELECT reset_code, reset_code_expires_at FROM users WHERE email = ?", 
+        (body.email,)
+    )
+    row = await cursor.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    db_code = row[0]
+    db_expiry = row[1]
+    
+    if not db_code or db_code != body.token: # 'token' field in request holds our 6-char code
+        raise HTTPException(status_code=401, detail="Invalid reset code")
+        
+    # Check expiry
+    expiry_dt = datetime.fromisoformat(db_expiry)
+    if datetime.now(timezone.utc) > expiry_dt:
+        raise HTTPException(status_code=401, detail="Reset code has expired")
 
     hashed = hash_password(body.new_password)
     await db.execute(
-        "UPDATE users SET hashed_password = ? WHERE email = ?",
+        "UPDATE users SET hashed_password = ?, reset_code = NULL, reset_code_expires_at = NULL WHERE email = ?",
         (hashed, body.email)
     )
     await db.commit()

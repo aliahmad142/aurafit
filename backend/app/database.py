@@ -26,6 +26,8 @@ async def init_db():
                 credits INTEGER DEFAULT 5,
                 plan_expires_at TIMESTAMP,
                 last_credit_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reset_code TEXT,
+                reset_code_expires_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )

@@ -5,6 +5,8 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from dotenv import load_dotenv
+import secrets
+import string
 
 load_dotenv()
 
@@ -54,6 +56,12 @@ def create_reset_token(email: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def generate_reset_code() -> str:
+    """Generate a 6-character alphanumeric reset code."""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(6))
 
 
 def decode_token(token: str) -> Optional[dict]:
