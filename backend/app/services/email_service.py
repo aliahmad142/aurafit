@@ -1,38 +1,18 @@
 import os
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
-from pydantic import EmailStr
+import resend
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class EmailService:
     def __init__(self):
-        mail_user = os.getenv("MAIL_USERNAME", "")
-        mail_port = int(os.getenv("MAIL_PORT", 465))
-        
-        # Fallback for MAIL_FROM to prevent Pydantic validation errors if env is missing
-        mail_from = os.getenv("MAIL_FROM", mail_user)
-        if not mail_from or "@" not in mail_from:
-            mail_from = "noreply@aurafit.ai" 
-
-        # Use SSL for port 465, STARTTLS for others (like 587)
-        use_ssl = (mail_port == 465)
-        use_tls = (mail_port != 465)
-
-        self.conf = ConnectionConfig(
-            MAIL_USERNAME=mail_user,
-            MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),
-            MAIL_FROM=mail_from, # Use validated fallback
-            MAIL_PORT=mail_port,
-            MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.googlemail.com"),
-            MAIL_STARTTLS=use_tls,
-            MAIL_SSL_TLS=use_ssl,
-            USE_CREDENTIALS=True,
-            VALIDATE_CERTS=False, # Disable to prevent handshake hangs
-        )
-        self.fm = FastMail(self.conf)
+        # Initialize Resend with the API Key from environment variables
+        resend.api_key = os.getenv("RESEND_API_KEY", "")
+        # Resend default "from" address for unverified domains
+        self.mail_from = os.getenv("MAIL_FROM", "onboarding@resend.dev")
 
     async def send_reset_password_email(self, email: str, code: str):
+        """Sends a password reset email using the Resend REST API."""
         html = f"""
         <html>
             <body style="font-family: 'Inter', sans-serif; background-color: #0B1020; color: #F8FAFC; padding: 40px;">
@@ -50,18 +30,27 @@ class EmailService:
                     </p>
                     <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 32px 0;">
                     <p style="font-size: 12px; color: #64748B; text-align: center;">
-                        &copy; 2026 AuraFit AI. Powered by Railway.
+                        &copy; 2026 AuraFit AI. Powered by Resend.
                     </p>
                 </div>
             </body>
         </html>
         """
-        message = MessageSchema(
-            subject="AuraFit - Password Reset Code",
-            recipients=[email],
-            body=html,
-            subtype=MessageType.html
-        )
-        await self.fm.send_message(message)
+        
+        try:
+            params = {
+                "from": self.mail_from,
+                "to": [email],
+                "subject": "AuraFit - Password Reset Code",
+                "html": html,
+            }
+            # Note: Resend Python library is synchronous, but we'll call it within our async flow
+            # For even better performance, we could use an async executor, 
+            # but since we already use BackgroundTasks in the route, this is fine.
+            resend.Emails.send(params)
+            print(f"[OK] Email sent via Resend to {email}")
+        except Exception as e:
+            print(f"[ERROR] Resend failed: {e}")
+            raise e
 
 email_service = EmailService()
