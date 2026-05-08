@@ -8,8 +8,13 @@ load_dotenv()
 class EmailService:
     def __init__(self):
         mail_user = os.getenv("MAIL_USERNAME", "")
-        mail_port = int(os.getenv("MAIL_PORT", 587))
+        mail_port = int(os.getenv("MAIL_PORT", 465))
         
+        # Fallback for MAIL_FROM to prevent Pydantic validation errors if env is missing
+        mail_from = os.getenv("MAIL_FROM", mail_user)
+        if not mail_from or "@" not in mail_from:
+            mail_from = "noreply@aurafit.ai" 
+
         # Use SSL for port 465, STARTTLS for others (like 587)
         use_ssl = (mail_port == 465)
         use_tls = (mail_port != 465)
@@ -17,7 +22,7 @@ class EmailService:
         self.conf = ConnectionConfig(
             MAIL_USERNAME=mail_user,
             MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),
-            MAIL_FROM=os.getenv("MAIL_FROM", mail_user),
+            MAIL_FROM=mail_from, # Use validated fallback
             MAIL_PORT=mail_port,
             MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.googlemail.com"),
             MAIL_STARTTLS=use_tls,
