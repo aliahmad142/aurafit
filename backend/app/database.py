@@ -44,5 +44,19 @@ async def init_db():
         await db.execute("""
             CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)
         """)
+        
+        # Auto-migration for existing databases
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN reset_code TEXT")
+            await db.commit()
+        except:
+            pass # Already exists
+            
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN reset_code_expires_at TIMESTAMP")
+            await db.commit()
+        except:
+            pass # Already exists
+            
         await db.commit()
         print("[OK] Database initialized successfully.")
