@@ -8,8 +8,10 @@ class EmailService:
     def __init__(self):
         # Initialize Resend with the API Key from environment variables
         resend.api_key = os.getenv("RESEND_API_KEY", "")
-        # Resend default "from" address for unverified domains
-        self.mail_from = os.getenv("MAIL_FROM", "onboarding@resend.dev")
+        
+        # Resend's free tier ONLY allows sending from onboarding@resend.dev
+        # We force this for now to ensure it works for the user.
+        self.mail_from = "onboarding@resend.dev"
 
     async def send_reset_password_email(self, email: str, code: str):
         """Sends a password reset email using the Resend REST API."""
