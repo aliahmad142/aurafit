@@ -19,11 +19,11 @@ class EmailService:
             MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),
             MAIL_FROM=os.getenv("MAIL_FROM", mail_user),
             MAIL_PORT=mail_port,
-            MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
+            MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.googlemail.com"),
             MAIL_STARTTLS=use_tls,
             MAIL_SSL_TLS=use_ssl,
             USE_CREDENTIALS=True,
-            VALIDATE_CERTS=True,
+            VALIDATE_CERTS=False, # Disable to prevent handshake hangs
         )
         self.fm = FastMail(self.conf)
 
