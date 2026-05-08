@@ -41,13 +41,6 @@ class VtoProvider with ChangeNotifier {
   Future<XFile?> _cropImage(XFile image) async {
     final croppedFile = await ImageCropper().cropImage(
       sourcePath: image.path,
-      aspectRatioPresets: [
-        CropAspectRatioPreset.square,
-        CropAspectRatioPreset.ratio3x2,
-        CropAspectRatioPreset.original,
-        CropAspectRatioPreset.ratio4x3,
-        CropAspectRatioPreset.ratio16x9
-      ],
       uiSettings: [
         AndroidUiSettings(
           toolbarTitle: 'Crop Image',
@@ -56,9 +49,23 @@ class VtoProvider with ChangeNotifier {
           initAspectRatio: CropAspectRatioPreset.original,
           lockAspectRatio: false,
           activeControlsWidgetColor: AppColors.primary,
+          aspectRatioPresets: [
+            CropAspectRatioPreset.square,
+            CropAspectRatioPreset.ratio3x2,
+            CropAspectRatioPreset.original,
+            CropAspectRatioPreset.ratio4x3,
+            CropAspectRatioPreset.ratio16x9
+          ],
         ),
         IOSUiSettings(
           title: 'Crop Image',
+          aspectRatioPresets: [
+            CropAspectRatioPreset.square,
+            CropAspectRatioPreset.ratio3x2,
+            CropAspectRatioPreset.original,
+            CropAspectRatioPreset.ratio4x3,
+            CropAspectRatioPreset.ratio16x9
+          ],
         ),
       ],
     );
