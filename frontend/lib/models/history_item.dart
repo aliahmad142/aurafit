@@ -4,6 +4,7 @@ class HistoryItem {
   final String? personImagePath;
   final String? clothImagePath;
   final String createdAt;
+  final bool isRemote; // Added to distinguish local vs cloud history
 
   HistoryItem({
     this.id,
@@ -11,6 +12,7 @@ class HistoryItem {
     this.personImagePath,
     this.clothImagePath,
     required this.createdAt,
+    this.isRemote = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -30,6 +32,18 @@ class HistoryItem {
       personImagePath: map['person_image_path'] as String?,
       clothImagePath: map['cloth_image_path'] as String?,
       createdAt: map['created_at'] as String,
+      isRemote: false,
+    );
+  }
+
+  factory HistoryItem.fromJson(Map<String, dynamic> json) {
+    return HistoryItem(
+      id: json['id'] as int?,
+      resultImagePath: json['result_image_url'] as String,
+      personImagePath: json['person_image_url'] as String?,
+      clothImagePath: json['cloth_image_url'] as String?,
+      createdAt: json['created_at'] as String,
+      isRemote: true,
     );
   }
 }

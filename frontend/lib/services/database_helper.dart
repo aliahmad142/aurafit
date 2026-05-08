@@ -41,6 +41,13 @@ class DatabaseHelper {
             created_at TEXT NOT NULL
           )
         ''');
+        await db.execute('''
+          CREATE TABLE favorites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_url TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL
+          )
+        ''');
       },
     );
   }
@@ -134,5 +141,35 @@ class DatabaseHelper {
   Future<int> clearHistory() async {
     final db = await database;
     return await db.delete('history_v2');
+  }
+
+  // ─── Favorites ──────────────────────────────────────────────────
+
+  Future<int> insertFavorite(String imageUrl) async {
+    try {
+      final db = await database;
+      return await db.insert('favorites', {
+        'image_url': imageUrl,
+        'created_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    } catch (e) {
+      debugPrint('DB ERROR (insertFavorite): $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getFavorites() async {
+    try {
+      final db = await database;
+      return await db.query('favorites', orderBy: 'created_at DESC');
+    } catch (e) {
+      debugPrint('DB ERROR (getFavorites): $e');
+      return [];
+    }
+  }
+
+  Future<int> deleteFavorite(String imageUrl) async {
+    final db = await database;
+    return await db.delete('favorites', where: 'image_url = ?', whereArgs: [imageUrl]);
   }
 }

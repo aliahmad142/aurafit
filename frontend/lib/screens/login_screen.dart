@@ -55,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final ok = await auth.login(email: _emailCtrl.text.trim(), password: _passCtrl.text);
     if (ok && mounted) {
+      await auth.refreshAllData(context);
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomeScreen()), (r) => false);
     }
@@ -188,6 +189,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               onTap: () async {
                 final ok = await auth.signInWithGoogle();
                 if (ok && mounted) {
+                  await auth.refreshAllData(context);
                   Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
                 }
               },

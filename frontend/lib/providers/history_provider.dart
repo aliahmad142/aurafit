@@ -17,9 +17,9 @@ class HistoryProvider with ChangeNotifier {
 
     try {
       _items = await _dbHelper.getHistoryItems();
-      debugPrint('Loaded ${_items.length} history items');
+      debugPrint('Loaded ${_items.length} history items (Local)');
     } catch (e) {
-      debugPrint('Error loading history: $e');
+      debugPrint('Error loading local history: $e');
     }
 
     _isLoading = false;
@@ -41,7 +41,7 @@ class HistoryProvider with ChangeNotifier {
       _items.removeWhere((item) => item.id == id);
       notifyListeners();
     } catch (e) {
-      debugPrint('Error deleting history item: $e');
+      debugPrint('Error deleting local history item: $e');
     }
   }
 
@@ -51,7 +51,7 @@ class HistoryProvider with ChangeNotifier {
       _items.clear();
       notifyListeners();
     } catch (e) {
-      debugPrint('Error clearing history: $e');
+      debugPrint('Error clearing local history: $e');
     }
   }
 }

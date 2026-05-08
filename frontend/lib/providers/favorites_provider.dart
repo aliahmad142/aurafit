@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
-import '../services/auth_service.dart';
-import '../utils/constants.dart';
+import '../services/database_helper.dart';
 
 class FavoritesProvider with ChangeNotifier {
-  final Dio _dio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
-  final AuthService _authService = AuthService();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   List<dynamic> _favorites = [];
   bool _isLoading = false;
@@ -21,14 +18,10 @@ class FavoritesProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final token = await _authService.getAccessToken();
-      final response = await _dio.get(
-        '/api/favorites',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-      _favorites = response.data;
+      final data = await _dbHelper.getFavorites();
+      _favorites = data;
     } catch (e) {
-      _errorMessage = "Failed to load favorites";
+      _errorMessage = "Failed to load local favorites";
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -37,29 +30,19 @@ class FavoritesProvider with ChangeNotifier {
 
   Future<void> addFavorite(String imageUrl) async {
     try {
-      final token = await _authService.getAccessToken();
-      await _dio.post(
-        '/api/favorites/add',
-        data: FormData.fromMap({'image_url': imageUrl}),
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-      fetchFavorites();
+      await _dbHelper.insertFavorite(imageUrl);
+      await fetchFavorites();
     } catch (e) {
-      print("Error adding favorite: $e");
+      debugPrint("Error adding local favorite: $e");
     }
   }
 
-  Future<void> removeFavorite(int id) async {
+  Future<void> removeFavorite(String imageUrl) async {
     try {
-      final token = await _authService.getAccessToken();
-      await _dio.delete(
-        '/api/favorites/remove/$id',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-      _favorites.removeWhere((item) => item['id'] == id);
-      notifyListeners();
+      await _dbHelper.deleteFavorite(imageUrl);
+      await fetchFavorites();
     } catch (e) {
-      print("Error removing favorite: $e");
+      debugPrint("Error removing local favorite: $e");
     }
   }
 
@@ -67,11 +50,6 @@ class FavoritesProvider with ChangeNotifier {
     return _favorites.any((item) => item['image_url'] == imageUrl);
   }
 
-  int? getFavoriteId(String imageUrl) {
-    try {
-      return _favorites.firstWhere((item) => item['image_url'] == imageUrl)['id'];
-    } catch (e) {
-      return null;
-    }
-  }
+  // Legacy helper for compatibility
+  int? getFavoriteId(String imageUrl) => 0; 
 }

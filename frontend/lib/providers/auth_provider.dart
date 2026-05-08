@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
+import '../providers/favorites_provider.dart';
+import '../providers/history_provider.dart';
+
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
 
@@ -44,6 +47,21 @@ class AuthProvider with ChangeNotifier {
     _isLoading = false;
     _isInitialized = true;
     notifyListeners();
+  }
+
+  /// Refresh all user-related data (credits, favorites, history).
+  Future<void> refreshAllData(BuildContext context) async {
+    if (_currentUser == null) return;
+    
+    // Refresh user profile (credits)
+    await refreshUser();
+    
+    if (context.mounted) {
+      // Refresh favorites
+      Provider.of<FavoritesProvider>(context, listen: false).fetchFavorites();
+      // Refresh history
+      Provider.of<HistoryProvider>(context, listen: false).loadHistory();
+    }
   }
 
   /// Register a new account.
@@ -194,6 +212,19 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Refresh current user data from server.
+  Future<void> refreshUser() async {
+    try {
+      final user = await _authService.getProfile();
+      if (user != null) {
+        _currentUser = user;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error refreshing user: $e');
     }
   }
 

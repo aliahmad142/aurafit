@@ -48,15 +48,13 @@ async def init_db():
         # Auto-migration for existing databases
         try:
             await db.execute("ALTER TABLE users ADD COLUMN reset_code TEXT")
-            await db.commit()
         except:
-            pass # Already exists
+            pass 
             
         try:
             await db.execute("ALTER TABLE users ADD COLUMN reset_code_expires_at TIMESTAMP")
-            await db.commit()
         except:
-            pass # Already exists
+            pass 
             
         await db.commit()
         print("[OK] Database initialized successfully.")

@@ -2,14 +2,114 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/animated_background.dart';
-import '../widgets/fade_in_slide.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final AuthService _authService = AuthService();
+
+  void _showUpdateNameDialog(BuildContext context, String currentName) {
+    final controller = TextEditingController(text: currentName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B2E),
+        title: const Text("Update Name", style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: "Enter new name",
+            hintStyle: TextStyle(color: Colors.white38),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                try {
+                  await _authService.updateProfile(name);
+                  if (context.mounted) {
+                    Provider.of<AuthProvider>(context, listen: false).refreshUser();
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated")));
+                  }
+                } catch (e) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                }
+              }
+            },
+            child: const Text("Update"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B2E),
+        title: const Text("Change Password", style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(hintText: "Current Password", hintStyle: TextStyle(color: Colors.white38)),
+            ),
+            TextField(
+              controller: newCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(hintText: "New Password", hintStyle: TextStyle(color: Colors.white38)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              if (currentCtrl.text.isNotEmpty && newCtrl.text.isNotEmpty) {
+                try {
+                  await _authService.changePassword(
+                    currentPassword: currentCtrl.text,
+                    newPassword: newCtrl.text,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password changed successfully")));
+                  }
+                } catch (e) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                }
+              }
+            },
+            child: const Text("Change"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context).currentUser;
+    final auth = Provider.of<AuthProvider>(context);
+    final user = auth.currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B1020),
@@ -36,6 +136,13 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.person_outline_rounded,
                     title: "Profile Information",
                     subtitle: user?.name ?? "User",
+                    onTap: () => _showUpdateNameDialog(context, user?.name ?? ""),
+                  ),
+                  _settingsTile(
+                    icon: Icons.lock_outline_rounded,
+                    title: "Security",
+                    subtitle: "Change Password",
+                    onTap: () => _showChangePasswordDialog(context),
                   ),
                   _settingsTile(
                     icon: Icons.email_outlined,
@@ -87,12 +194,65 @@ class SettingsScreen extends StatelessWidget {
                 ]),
                 const SizedBox(height: 40),
                 Center(
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      "Delete Account",
-                      style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
-                    ),
+                  child: Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          await auth.logout();
+                          if (context.mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              (route) => false,
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white10,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text("Sign Out"),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              backgroundColor: const Color(0xFF161B2E),
+                              title: const Text("Delete Account", style: TextStyle(color: Colors.redAccent)),
+                              content: const Text("Are you sure? This will delete all your history and favorites. This action cannot be undone.", style: TextStyle(color: Colors.white70)),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+                                TextButton(
+                                  onPressed: () async {
+                                    try {
+                                      await _authService.deleteAccount();
+                                      if (context.mounted) {
+                                        Navigator.pushAndRemoveUntil(
+                                          context,
+                                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                          (route) => false,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) Navigator.pop(context);
+                                    }
+                                  },
+                                  child: const Text("Delete", style: TextStyle(color: Colors.redAccent)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Delete Account",
+                          style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -135,6 +295,7 @@ class SettingsScreen extends StatelessWidget {
     required String title,
     String? subtitle,
     Widget? trailing,
+    VoidCallback? onTap,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -151,7 +312,7 @@ class SettingsScreen extends StatelessWidget {
           ? Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13))
           : null,
       trailing: trailing,
-      onTap: () {},
+      onTap: onTap,
     );
   }
 

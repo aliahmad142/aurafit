@@ -187,8 +187,11 @@ class HomeScreen extends StatelessWidget {
                       onPressed: () async {
                         final historyProvider =
                             Provider.of<HistoryProvider>(context, listen: false);
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
                         bool success = await provider.processTryOn(
                           historyProvider: historyProvider,
+                          authProvider: authProvider,
                         );
                         if (success && context.mounted) {
                           Navigator.push(

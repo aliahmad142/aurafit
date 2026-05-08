@@ -43,6 +43,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.checkAuthStatus();
+    
+    if (authProvider.isAuthenticated && mounted) {
+      // Sync favorites and history on startup
+      await authProvider.refreshAllData(context);
+    }
+    
     final isLoggedIn = authProvider.isAuthenticated;
 
     if (mounted) {

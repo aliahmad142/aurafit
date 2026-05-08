@@ -97,6 +97,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
       password: _passCtrl.text,
     );
     if (ok && mounted) {
+      await auth.refreshAllData(context);
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomeScreen()), (r) => false);
     }

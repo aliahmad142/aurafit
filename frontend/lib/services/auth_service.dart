@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -105,7 +106,7 @@ class AuthService {
   Future<void> _saveUser(Map<String, dynamic> userJson) async {
     await _storage.write(
       key: _userKey,
-      value: userJson.entries.map((e) => '${e.key}=${e.value}').join('||'),
+      value: jsonEncode(userJson),
     );
   }
 
@@ -113,20 +114,10 @@ class AuthService {
     final data = await _storage.read(key: _userKey);
     if (data == null) return null;
     try {
-      final map = <String, dynamic>{};
-      for (final pair in data.split('||')) {
-        final idx = pair.indexOf('=');
-        if (idx == -1) continue;
-        final key = pair.substring(0, idx);
-        final value = pair.substring(idx + 1);
-        if (key == 'id') {
-          map[key] = int.tryParse(value) ?? 0;
-        } else {
-          map[key] = value == 'null' ? null : value;
-        }
-      }
+      final Map<String, dynamic> map = jsonDecode(data);
       return User.fromJson(map);
-    } catch (_) {
+    } catch (e) {
+      print("Error decoding saved user: $e");
       return null;
     }
   }
@@ -260,6 +251,62 @@ class AuthService {
         'new_password': newPassword,
       });
       return response.data['message'];
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // ─── Settings & Profile ──────────────────────────────────────────
+
+  Future<Map<String, dynamic>> updateProfile(String name) async {
+    try {
+      final token = await getAccessToken();
+      final response = await _dio.post(
+        '/api/auth/update-profile',
+        data: FormData.fromMap({'name': name}),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      
+      final updatedUser = await getProfile();
+      if (updatedUser != null) {
+        await _saveUser(updatedUser.toJson());
+      }
+      
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getAccessToken();
+      final response = await _dio.post(
+        '/api/auth/change-password',
+        data: FormData.fromMap({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      final token = await getAccessToken();
+      final response = await _dio.delete(
+        '/api/auth/account',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      await clearAll();
+      return response.data;
     } on DioException catch (e) {
       throw _handleError(e);
     }

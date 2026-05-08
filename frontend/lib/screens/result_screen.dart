@@ -99,9 +99,8 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         actions: [
           Consumer<FavoritesProvider>(
             builder: (context, favProvider, _) {
-              // Since we use base64 in results, we'll store the base64 as the URL for simplicity in this dev environment
-              // In production, you'd use the permanent cloud URL
-              final imageUrl = result?.resultImageBase64 ?? "";
+              // Use the local path for favoriting since history is not on cloud
+              final String imageUrl = provider.lastResultLocalPath ?? "";
               final isFav = favProvider.isFavorited(imageUrl);
 
               return IconButton(
@@ -110,9 +109,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                   color: isFav ? Colors.redAccent : Colors.white,
                 ),
                 onPressed: () {
+                  if (imageUrl.isEmpty) return;
                   if (isFav) {
-                    final id = favProvider.getFavoriteId(imageUrl);
-                    if (id != null) favProvider.removeFavorite(id);
+                    favProvider.removeFavorite(imageUrl);
                   } else {
                     favProvider.addFavorite(imageUrl);
                   }

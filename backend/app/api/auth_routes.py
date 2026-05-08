@@ -267,3 +267,57 @@ async def google_login(body: dict, db: aiosqlite.Connection = Depends(get_db)):
     except ValueError as e:
         # Invalid token
         raise HTTPException(status_code=401, detail=f"Invalid Google Token: {e}")
+
+
+# ─── Settings & Profile ──────────────────────────────────────────
+
+@auth_router.post("/update-profile")
+async def update_profile(
+    name: str = Form(...),
+    current_user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """Update the current user's name."""
+    await db.execute(
+        "UPDATE users SET name = ? WHERE id = ?",
+        (name, current_user["id"])
+    )
+    await db.commit()
+    return {"message": "Profile updated successfully", "name": name}
+
+@auth_router.post("/change-password")
+async def change_password(
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    current_user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """Change user password."""
+    # First verify current password
+    cursor = await db.execute("SELECT hashed_password FROM users WHERE id = ?", (current_user["id"],))
+    row = await cursor.fetchone()
+    
+    if not row or not verify_password(current_password, row[0]):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    # Update to new password
+    hashed = hash_password(new_password)
+    await db.execute("UPDATE users SET hashed_password = ? WHERE id = ?", (hashed, current_user["id"]))
+    await db.commit()
+    return {"message": "Password changed successfully"}
+
+@auth_router.delete("/account")
+async def delete_account(
+    current_user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """Delete the user account and all related data."""
+    # Delete history
+    await db.execute("DELETE FROM history WHERE user_id = ?", (current_user["id"],))
+    # Delete favorites
+    await db.execute("DELETE FROM favorites WHERE user_id = ?", (current_user["id"],))
+    # Delete user
+    await db.execute("DELETE FROM users WHERE id = ?", (current_user["id"],))
+    
+    await db.commit()
+    return {"message": "Account deleted successfully"}

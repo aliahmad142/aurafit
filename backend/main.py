@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.api.routes import router as api_router
 from app.api.auth_routes import auth_router
 from app.api.payment_routes import payment_router
@@ -17,6 +18,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Virtual Try-On API", lifespan=lifespan)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Enable CORS for Flutter mobile/web development
 app.add_middleware(
