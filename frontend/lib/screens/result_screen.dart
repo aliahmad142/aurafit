@@ -10,8 +10,8 @@ import 'package:path_provider/path_provider.dart';
 import '../providers/vto_provider.dart';
 import '../utils/constants.dart';
 import '../utils/app_colors.dart';
+import '../widgets/custom_button.dart';
 import '../providers/favorites_provider.dart';
-import '../models/vto_model.dart';
 
 class ResultScreen extends StatefulWidget {
   const ResultScreen({super.key});
