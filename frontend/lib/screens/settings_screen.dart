@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
+import '../providers/history_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../widgets/animated_background.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'pricing_screen.dart';
+import 'favorites_screen.dart';
+import 'history_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -106,6 +112,131 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showHelpCenterDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.help_outline_rounded, color: Color(0xFF7C5CFF)),
+            SizedBox(width: 12),
+            Text("Help Center", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Frequently Asked Questions", style: TextStyle(color: Color(0xFF7C5CFF), fontWeight: FontWeight.bold, fontSize: 14)),
+            SizedBox(height: 16),
+            _HelpItem(question: "How does virtual try-on work?", answer: "Upload a photo of yourself and a garment image. Our AI will generate a realistic preview of you wearing the outfit."),
+            SizedBox(height: 12),
+            _HelpItem(question: "Are my images stored?", answer: "Your images are encrypted and stored locally on your device. They are never sent to external servers for storage."),
+            SizedBox(height: 12),
+            _HelpItem(question: "How do I get more credits?", answer: "You can purchase a Daily Pass from the Pricing screen to get additional try-on credits."),
+            SizedBox(height: 20),
+            Divider(color: Colors.white10),
+            SizedBox(height: 12),
+            Text("Need more help?", style: TextStyle(color: Colors.white70, fontSize: 13)),
+            SizedBox(height: 4),
+            Text("Contact us at support@aurafit.com", style: TextStyle(color: Color(0xFF7C5CFF), fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close")),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF161B2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.privacy_tip_outlined, color: Color(0xFF7C5CFF)),
+            SizedBox(width: 12),
+            Text("Privacy Policy", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Last updated: May 2026", style: TextStyle(color: Colors.white38, fontSize: 12)),
+              SizedBox(height: 16),
+              _PolicySection(
+                title: "1. Data Collection",
+                body: "We collect your name, email address, and account credentials when you sign up. Your photos are processed locally and encrypted on your device.",
+              ),
+              _PolicySection(
+                title: "2. Image Privacy",
+                body: "All images uploaded for virtual try-on are encrypted with AES-256-CBC before being stored locally. Images sent to the AI processing service are immediately discarded after processing.",
+              ),
+              _PolicySection(
+                title: "3. Local Storage",
+                body: "Your try-on history and favorites are stored locally on your device using encrypted files. We do not store your images on any cloud server.",
+              ),
+              _PolicySection(
+                title: "4. Third-Party Services",
+                body: "We use Google Sign-In for authentication and a third-party AI service for garment fitting. These services have their own privacy policies.",
+              ),
+              _PolicySection(
+                title: "5. Data Deletion",
+                body: "You can delete your account and all associated data at any time from the Settings screen. Local history and favorites can also be cleared independently.",
+              ),
+              _PolicySection(
+                title: "6. Contact",
+                body: "For privacy-related questions, contact us at privacy@aurafit.com.",
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close")),
+        ],
+      ),
+    );
+  }
+
+  void _showClearDataDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161B2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Clear All Data?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'This will permanently delete all your local try-on history and favorites. Your account will not be affected.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              Provider.of<HistoryProvider>(context, listen: false).clearAll();
+              Provider.of<FavoritesProvider>(context, listen: false).clearAll();
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('All local data cleared'), behavior: SnackBarBehavior.floating),
+              );
+            },
+            child: const Text('Clear All', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -148,31 +279,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.email_outlined,
                     title: "Email",
                     subtitle: user?.email ?? "Not provided",
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text("Verified", style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
                   ),
                   _settingsTile(
                     icon: Icons.workspace_premium_rounded,
                     title: "Subscription",
                     subtitle: user?.planType == 'FREE' ? "Free Tier" : "Daily Pass",
                     trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PricingScreen())),
                   ),
                 ]),
                 const SizedBox(height: 32),
                 _buildSectionTitle("PREFERENCES"),
+                Consumer<SettingsProvider>(
+                  builder: (context, settings, _) {
+                    return _buildSettingsCard([
+                      _settingsSwitch(
+                        icon: Icons.notifications_none_rounded,
+                        title: "Push Notifications",
+                        value: settings.pushNotifications,
+                        onChanged: (v) => settings.setPushNotifications(v),
+                      ),
+                      _settingsSwitch(
+                        icon: Icons.high_quality_rounded,
+                        title: "HD Rendering",
+                        value: settings.hdRendering,
+                        onChanged: (v) => settings.setHdRendering(v),
+                      ),
+                      _settingsSwitch(
+                        icon: Icons.save_alt_rounded,
+                        title: "Auto-save to Gallery",
+                        value: settings.autoSaveToGallery,
+                        onChanged: (v) => settings.setAutoSaveToGallery(v),
+                      ),
+                    ]);
+                  },
+                ),
+                const SizedBox(height: 32),
+                _buildSectionTitle("DATA"),
                 _buildSettingsCard([
-                  _settingsSwitch(
-                    icon: Icons.notifications_none_rounded,
-                    title: "Push Notifications",
-                    value: true,
+                  _settingsTile(
+                    icon: Icons.favorite_rounded,
+                    title: "My Favorites",
+                    subtitle: "View saved styles",
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen())),
                   ),
-                  _settingsSwitch(
-                    icon: Icons.high_quality_rounded,
-                    title: "HD Rendering",
-                    value: false,
+                  _settingsTile(
+                    icon: Icons.history_rounded,
+                    title: "Try-On History",
+                    subtitle: "View past results",
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen())),
                   ),
-                  _settingsSwitch(
-                    icon: Icons.save_alt_rounded,
-                    title: "Auto-save to Gallery",
-                    value: true,
+                  _settingsTile(
+                    icon: Icons.delete_sweep_rounded,
+                    title: "Clear All Data",
+                    subtitle: "Remove history & favorites",
+                    titleColor: Colors.redAccent,
+                    onTap: () => _showClearDataDialog(context),
                   ),
                 ]),
                 const SizedBox(height: 32),
@@ -181,10 +353,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _settingsTile(
                     icon: Icons.help_outline_rounded,
                     title: "Help Center",
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+                    onTap: () => _showHelpCenterDialog(context),
                   ),
                   _settingsTile(
                     icon: Icons.privacy_tip_outlined,
                     title: "Privacy Policy",
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+                    onTap: () => _showPrivacyPolicyDialog(context),
                   ),
                   _settingsTile(
                     icon: Icons.info_outline_rounded,
@@ -229,6 +405,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 TextButton(
                                   onPressed: () async {
                                     try {
+                                      // Clear all local data first
+                                      Provider.of<HistoryProvider>(context, listen: false).clearAll();
+                                      Provider.of<FavoritesProvider>(context, listen: false).clearAll();
                                       await _authService.deleteAccount();
                                       if (context.mounted) {
                                         Navigator.pushAndRemoveUntil(
@@ -296,6 +475,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String? subtitle,
     Widget? trailing,
     VoidCallback? onTap,
+    Color? titleColor,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -307,7 +487,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Icon(icon, color: const Color(0xFF7C5CFF), size: 20),
       ),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+      title: Text(title, style: TextStyle(color: titleColor ?? Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
       subtitle: subtitle != null
           ? Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13))
           : null,
@@ -320,6 +500,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     required bool value,
+    required ValueChanged<bool> onChanged,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -334,9 +515,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
       trailing: Switch(
         value: value,
-        onChanged: (v) {},
+        onChanged: onChanged,
         activeColor: const Color(0xFF7C5CFF),
         activeTrackColor: const Color(0xFF7C5CFF).withOpacity(0.3),
+      ),
+    );
+  }
+}
+
+// ─── Helper Widgets for Dialogs ──────────────────────────────────────
+
+class _HelpItem extends StatelessWidget {
+  final String question;
+  final String answer;
+
+  const _HelpItem({required this.question, required this.answer});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(question, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(answer, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, height: 1.4)),
+      ],
+    );
+  }
+}
+
+class _PolicySection extends StatelessWidget {
+  final String title;
+  final String body;
+
+  const _PolicySection({required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text(body, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13, height: 1.5)),
+        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/vto_provider.dart';
 import 'providers/history_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/settings_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/app_colors.dart';
 import 'services/encryption_service.dart';
@@ -22,6 +23,11 @@ void main() async {
         ChangeNotifierProvider(create: (_) => VtoProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+        ChangeNotifierProvider(create: (_) {
+          final sp = SettingsProvider();
+          sp.loadPreferences();
+          return sp;
+        }),
       ],
       child: const MyApp(),
     ),

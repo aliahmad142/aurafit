@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import '../providers/vto_provider.dart';
+import '../providers/settings_provider.dart';
 import '../utils/constants.dart';
 import '../utils/app_colors.dart';
 import '../widgets/custom_button.dart';
@@ -30,6 +31,11 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     _animCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _reveal = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _animCtrl.forward();
+
+    // Auto-save to gallery if the setting is enabled
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSaveIfEnabled();
+    });
   }
 
   @override
@@ -38,7 +44,18 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  Future<void> _saveToGallery(BuildContext context, String base64Image) async {
+  void _autoSaveIfEnabled() {
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    if (settings.autoSaveToGallery) {
+      final provider = Provider.of<VtoProvider>(context, listen: false);
+      final result = provider.result;
+      if (result?.resultImageBase64 != null) {
+        _saveToGallery(context, result!.resultImageBase64!, showSnackbar: false);
+      }
+    }
+  }
+
+  Future<void> _saveToGallery(BuildContext context, String base64Image, {bool showSnackbar = true}) async {
     try {
       final Uint8List bytes = base64Decode(base64Image);
       final tempDir = await getTemporaryDirectory();
@@ -48,7 +65,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
       await Gal.putImage(filePath);
 
-      if (context.mounted) {
+      if (showSnackbar && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Image saved to gallery!'),

@@ -37,6 +37,14 @@ class HistoryProvider with ChangeNotifier {
 
   Future<void> deleteItem(int id) async {
     try {
+      // Safely find the item — it may already be removed
+      final item = _items.cast<HistoryItem?>().firstWhere((i) => i?.id == id, orElse: () => null);
+      if (item != null) {
+        // Delete associated favorite if exists
+        await _dbHelper.deleteFavorite(item.resultImagePath);
+        // Delete encrypted image files from disk
+        await _dbHelper.deleteImageFiles(item);
+      }
       await _dbHelper.deleteHistoryItem(id);
       _items.removeWhere((item) => item.id == id);
       notifyListeners();
@@ -47,7 +55,9 @@ class HistoryProvider with ChangeNotifier {
 
   Future<void> clearAll() async {
     try {
+      await _dbHelper.clearFavorites();
       await _dbHelper.clearHistory();
+      await _dbHelper.clearAllImageFiles();
       _items.clear();
       notifyListeners();
     } catch (e) {

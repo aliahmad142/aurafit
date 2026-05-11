@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../models/try_on_response.dart';
 import '../models/history_item.dart';
@@ -75,23 +76,66 @@ class VtoProvider with ChangeNotifier {
     return null;
   }
 
+  Future<bool> _requestPermission(ImageSource source) async {
+    _errorMessage = null;
+    Permission permission;
+    if (source == ImageSource.camera) {
+      permission = Permission.camera;
+    } else {
+      // For gallery access
+      // On Android 13+ (SDK 33+), we should use Permission.photos
+      // On older Android, Permission.storage is used.
+      // permission_handler handles most of this mapping.
+      permission = Permission.photos;
+      
+      // Check if it's Android and SDK < 33
+      // However, Permission.photos is generally the right way now for media.
+    }
+
+    var status = await permission.status;
+    if (status.isGranted) return true;
+
+    if (status.isDenied) {
+      status = await permission.request();
+      if (status.isGranted) return true;
+    }
+
+    if (status.isPermanentlyDenied) {
+      _errorMessage = "Permission permanently denied. Please enable it in settings.";
+      notifyListeners();
+      // Optionally open settings
+      // await openAppSettings();
+      return false;
+    }
+
+    _errorMessage = "Permission required to access ${source == ImageSource.camera ? 'camera' : 'gallery'}.";
+    notifyListeners();
+    return false;
+  }
+
   Future<void> pickPersonImage(ImageSource source) async {
+    if (!await _requestPermission(source)) return;
+    
     final XFile? image = await _picker.pickImage(source: source);
     if (image != null) {
       final cropped = await _cropImage(image);
       if (cropped != null) {
         _personImage = cropped;
+        _errorMessage = null; // Clear error message on success
         notifyListeners();
       }
     }
   }
 
   Future<void> pickClothImage(ImageSource source) async {
+    if (!await _requestPermission(source)) return;
+
     final XFile? image = await _picker.pickImage(source: source);
     if (image != null) {
       final cropped = await _cropImage(image);
       if (cropped != null) {
         _clothImage = cropped;
+        _errorMessage = null; // Clear error message on success
         notifyListeners();
       }
     }

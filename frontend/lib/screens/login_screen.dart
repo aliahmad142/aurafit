@@ -196,10 +196,23 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.network(
-                    "https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg",
+                  Container(
+                    width: 24,
                     height: 24,
-                    errorBuilder: (ctx, _, __) => const Icon(Icons.g_mobiledata_rounded, size: 30, color: AppColors.textPrimary),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'G',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Text(

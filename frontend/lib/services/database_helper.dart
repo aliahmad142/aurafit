@@ -134,13 +134,46 @@ class DatabaseHelper {
 
   Future<int> deleteHistoryItem(int id) async {
     final db = await database;
-    // Note: In a full implementation, we should also delete the files on disk here.
     return await db.delete('history_v2', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Deletes the encrypted image files associated with a history item from disk.
+  Future<void> deleteImageFiles(HistoryItem item) async {
+    final paths = [
+      item.resultImagePath,
+      if (item.personImagePath != null) item.personImagePath!,
+      if (item.clothImagePath != null) item.clothImagePath!,
+    ];
+    for (final path in paths) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+          debugPrint('Deleted image file: $path');
+        }
+      } catch (e) {
+        debugPrint('Error deleting file $path: $e');
+      }
+    }
   }
 
   Future<int> clearHistory() async {
     final db = await database;
     return await db.delete('history_v2');
+  }
+
+  /// Deletes the entire history_images directory from disk.
+  Future<void> clearAllImageFiles() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final historyDir = Directory(p.join(directory.path, 'history_images'));
+      if (await historyDir.exists()) {
+        await historyDir.delete(recursive: true);
+        debugPrint('Cleared all image files from disk');
+      }
+    } catch (e) {
+      debugPrint('Error clearing image files: $e');
+    }
   }
 
   // ─── Favorites ──────────────────────────────────────────────────
@@ -171,5 +204,10 @@ class DatabaseHelper {
   Future<int> deleteFavorite(String imageUrl) async {
     final db = await database;
     return await db.delete('favorites', where: 'image_url = ?', whereArgs: [imageUrl]);
+  }
+
+  Future<int> clearFavorites() async {
+    final db = await database;
+    return await db.delete('favorites');
   }
 }

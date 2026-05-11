@@ -1,8 +1,12 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/favorites_provider.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/fade_in_slide.dart';
+import '../services/database_helper.dart';
+import '../models/history_item.dart';
+import 'history_detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -94,32 +98,62 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.white.withOpacity(0.1)),
-          image: DecorationImage(
-            image: NetworkImage(item['image_url']),
-            fit: BoxFit.cover,
-          ),
         ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: 8,
-              right: 8,
-              child: GestureDetector(
-                onTap: () {
-                  Provider.of<FavoritesProvider>(context, listen: false).removeFavorite(item['id']);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black45,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HistoryDetailScreen(
+                    item: HistoryItem(
+                      resultImagePath: item['image_url'],
+                      createdAt: item['created_at'],
+                    ),
                   ),
-                  child: const Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 18),
                 ),
-              ),
+              ).then((_) => Provider.of<FavoritesProvider>(context, listen: false).fetchFavorites());
+            },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                FutureBuilder<Uint8List>(
+                  future: DatabaseHelper().readImageFile(item['image_url']),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                    }
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      return const Center(child: Icon(Icons.broken_image_rounded, color: Colors.white24));
+                    }
+                    return Image.memory(
+                      snapshot.data!,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () {
+                      Provider.of<FavoritesProvider>(context, listen: false).removeFavorite(item['image_url']);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 18),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

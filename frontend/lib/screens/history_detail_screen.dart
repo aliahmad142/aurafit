@@ -9,6 +9,7 @@ import '../providers/history_provider.dart';
 import '../utils/app_colors.dart';
 import '../widgets/custom_button.dart';
 import '../services/database_helper.dart';
+import '../providers/favorites_provider.dart';
 
 class HistoryDetailScreen extends StatelessWidget {
   final HistoryItem item;
@@ -98,10 +99,29 @@ class HistoryDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Style Detail'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-            onPressed: () => _confirmDelete(context),
+          Consumer<FavoritesProvider>(
+            builder: (context, favProvider, _) {
+              final isFav = favProvider.isFavorited(item.resultImagePath);
+              return IconButton(
+                icon: Icon(
+                  isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: isFav ? Colors.redAccent : Colors.white,
+                ),
+                onPressed: () {
+                  if (isFav) {
+                    favProvider.removeFavorite(item.resultImagePath);
+                  } else {
+                    favProvider.addFavorite(item.resultImagePath);
+                  }
+                },
+              );
+            },
           ),
+          if (item.id != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+              onPressed: () => _confirmDelete(context),
+            ),
         ],
       ),
       body: SingleChildScrollView(

@@ -46,6 +46,17 @@ class FavoritesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> clearAll() async {
+    try {
+      final db = await _dbHelper.database;
+      await db.delete('favorites');
+      _favorites.clear();
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error clearing local favorites: $e");
+    }
+  }
+
   bool isFavorited(String imageUrl) {
     return _favorites.any((item) => item['image_url'] == imageUrl);
   }

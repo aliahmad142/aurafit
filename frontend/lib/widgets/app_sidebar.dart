@@ -227,13 +227,7 @@ class AppSidebar extends StatelessWidget {
     );
   }
 
-  Widget _settingsToggle(String title, bool value) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-      trailing: Switch(value: value, onChanged: (v) {}, activeColor: const Color(0xFF7C5CFF)),
-    );
-  }
+
 
   Widget _menuTile(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
