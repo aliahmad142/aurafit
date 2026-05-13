@@ -70,6 +70,7 @@ class AuthProvider with ChangeNotifier {
     required String name,
     required String email,
     required String password,
+    String? referralCode,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -80,6 +81,7 @@ class AuthProvider with ChangeNotifier {
         name: name,
         email: email,
         password: password,
+        referralCode: referralCode,
       );
       _currentUser = result['user'] as User;
       _isLoading = false;

@@ -10,6 +10,7 @@ import 'login_screen.dart';
 import 'pricing_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
+import 'referral_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -294,6 +295,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: user?.planType == 'FREE' ? "Free Tier" : "Daily Pass",
                     trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PricingScreen())),
+                  ),
+                  _settingsTile(
+                    icon: Icons.card_giftcard_rounded,
+                    title: "Refer & Earn",
+                    subtitle: "Invite friends, earn 5 credits",
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen())),
                   ),
                 ]),
                 const SizedBox(height: 32),

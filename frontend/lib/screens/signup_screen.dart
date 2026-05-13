@@ -20,6 +20,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  final _referralCtrl = TextEditingController();
   bool _hidePass = true;
   bool _hideConfirm = true;
   late AnimationController _animCtrl;
@@ -29,6 +30,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   final FocusNode _emailNode = FocusNode();
   final FocusNode _passNode = FocusNode();
   final FocusNode _confirmNode = FocusNode();
+  final FocusNode _referralNode = FocusNode();
 
   @override
   void initState() {
@@ -40,6 +42,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     _emailNode.addListener(() => setState(() {}));
     _passNode.addListener(() => setState(() {}));
     _confirmNode.addListener(() => setState(() {}));
+    _referralNode.addListener(() => setState(() {}));
     
     _animCtrl.forward();
   }
@@ -52,10 +55,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
+    _referralCtrl.dispose();
     _nameNode.dispose();
     _emailNode.dispose();
     _passNode.dispose();
     _confirmNode.dispose();
+    _referralNode.dispose();
     super.dispose();
   }
 
@@ -91,10 +96,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final referral = _referralCtrl.text.trim();
     final ok = await auth.signup(
       name: _nameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
       password: _passCtrl.text,
+      referralCode: referral.isNotEmpty ? referral : null,
     );
     if (ok && mounted) {
       await auth.refreshAllData(context);
@@ -229,6 +236,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                     onPressed: () => setState(() => _hideConfirm = !_hideConfirm),
                   ),
                   validator: (v) => v == _passCtrl.text ? null : "Passwords don't match"),
+            ),
+            const SizedBox(height: 16),
+            FadeInSlide(
+              delay: const Duration(milliseconds: 850),
+              child: _field(_referralCtrl, "Referral Code (optional)", Icons.card_giftcard_rounded,
+                  node: _referralNode),
             ),
             const SizedBox(height: 24),
             _errorBanner(),

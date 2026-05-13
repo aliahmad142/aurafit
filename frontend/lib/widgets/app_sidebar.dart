@@ -8,6 +8,7 @@ import '../screens/history_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/favorites_screen.dart';
+import '../screens/referral_screen.dart';
 
 class AppSidebar extends StatelessWidget {
   const AppSidebar({super.key});
@@ -39,8 +40,9 @@ class AppSidebar extends StatelessWidget {
                 const SizedBox(height: 20),
                 _buildCreditCard(context),
                 const SizedBox(height: 32),
-                _buildMenuItems(context),
-                const Spacer(),
+                Expanded(
+                  child: _buildMenuItems(context),
+                ),
                 _buildFooter(context),
               ],
             ),
@@ -188,7 +190,7 @@ class AppSidebar extends StatelessWidget {
   }
 
   Widget _buildMenuItems(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Column(
         children: [
@@ -199,6 +201,10 @@ class AppSidebar extends StatelessWidget {
           _menuTile(Icons.favorite_rounded, "My Favorites", () {
             Navigator.pop(context);
             Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()));
+          }),
+          _menuTile(Icons.card_giftcard_rounded, "Refer & Earn", () {
+            Navigator.pop(context);
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen()));
           }),
           _menuTile(Icons.settings_rounded, "App Settings", () {
             Navigator.pop(context);

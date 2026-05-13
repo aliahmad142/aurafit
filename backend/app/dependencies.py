@@ -36,7 +36,7 @@ async def get_current_user(
 
     # Fetch user from database
     cursor = await db.execute(
-        "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at FROM users WHERE id = ?",
+        "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at, referral_code FROM users WHERE id = ?",
         (int(user_id),),
     )
     row = await cursor.fetchone()
@@ -51,4 +51,5 @@ async def get_current_user(
         "credits": row[4],
         "plan_expires_at": row[5],
         "created_at": row[6],
+        "referral_code": row[7],
     }

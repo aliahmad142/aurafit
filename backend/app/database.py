@@ -28,6 +28,8 @@ async def init_db():
                 last_credit_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 reset_code TEXT,
                 reset_code_expires_at TIMESTAMP,
+                referral_code TEXT UNIQUE,
+                referred_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -54,7 +56,42 @@ async def init_db():
         try:
             await db.execute("ALTER TABLE users ADD COLUMN reset_code_expires_at TIMESTAMP")
         except:
-            pass 
+            pass
+            
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN referral_code TEXT")
+        except:
+            pass
+            
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN referred_by INTEGER")
+        except:
+            pass
+
+        # Create index after migration ensures column exists
+        try:
+            await db.execute("""
+                CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)
+            """)
+        except:
+            pass
+
+        # Backfill referral codes for existing users who don't have one
+        import string, random
+        cursor = await db.execute("SELECT id FROM users WHERE referral_code IS NULL")
+        rows = await cursor.fetchall()
+        for row in rows:
+            for _ in range(10):
+                code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                try:
+                    await db.execute(
+                        "UPDATE users SET referral_code = ? WHERE id = ? AND referral_code IS NULL",
+                        (code, row[0])
+                    )
+                    print(f"[OK] Backfilled referral code for user {row[0]}: {code}")
+                    break
+                except Exception:
+                    continue
             
         await db.commit()
         print("[OK] Database initialized successfully.")

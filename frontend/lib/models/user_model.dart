@@ -4,6 +4,7 @@ class User {
   final String email;
   final String planType;
   final int credits;
+  final String? referralCode;
   final String? planExpiresAt;
   final String? createdAt;
 
@@ -13,6 +14,7 @@ class User {
     required this.email,
     this.planType = 'FREE',
     this.credits = 5,
+    this.referralCode,
     this.planExpiresAt,
     this.createdAt,
   });
@@ -24,6 +26,7 @@ class User {
       email: json['email'],
       planType: json['plan_type'] ?? 'FREE',
       credits: json['credits'] ?? 0,
+      referralCode: json['referral_code'],
       planExpiresAt: json['plan_expires_at'],
       createdAt: json['created_at'],
     );
@@ -36,6 +39,7 @@ class User {
       'email': email,
       'plan_type': planType,
       'credits': credits,
+      'referral_code': referralCode,
       'plan_expires_at': planExpiresAt,
       'created_at': createdAt,
     };

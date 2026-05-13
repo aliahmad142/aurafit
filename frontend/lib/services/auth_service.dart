@@ -133,13 +133,19 @@ class AuthService {
     required String name,
     required String email,
     required String password,
+    String? referralCode,
   }) async {
     try {
-      final response = await _dio.post('/api/auth/signup', data: {
+      final Map<String, dynamic> body = {
         'name': name,
         'email': email,
         'password': password,
-      });
+      };
+      if (referralCode != null && referralCode.trim().isNotEmpty) {
+        body['referral_code'] = referralCode.trim().toUpperCase();
+      }
+
+      final response = await _dio.post('/api/auth/signup', data: body);
 
       final data = response.data;
       await _saveTokens(data['access_token'], data['refresh_token']);

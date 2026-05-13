@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     name: str
     email: str
     password: str
+    referral_code: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -84,6 +85,7 @@ class UserResponse(BaseModel):
     email: str
     plan_type: str = "FREE"
     credits: int = 5
+    referral_code: Optional[str] = None
     plan_expires_at: Optional[str] = None
     created_at: Optional[str] = None
 

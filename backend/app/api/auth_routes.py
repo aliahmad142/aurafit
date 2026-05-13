@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Form
 import aiosqlite
+import string
+import random
 from datetime import datetime, timedelta, timezone
 
 from app.database import get_db
@@ -30,7 +32,44 @@ from google.auth.transport import requests as google_requests
 auth_router = APIRouter()
 
 
-# ─── Helper ───────────────────────────────────────────────────────
+# ─── Helpers ──────────────────────────────────────────────────────
+
+def _generate_referral_code(length: int = 8) -> str:
+    """Generate a random alphanumeric referral code."""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=length))
+
+
+async def _get_unique_referral_code(db: aiosqlite.Connection) -> str:
+    """Generate a referral code that doesn't already exist in the DB."""
+    for _ in range(10):
+        code = _generate_referral_code()
+        cursor = await db.execute("SELECT id FROM users WHERE referral_code = ?", (code,))
+        if not await cursor.fetchone():
+            return code
+    # Fallback: longer code
+    return _generate_referral_code(12)
+
+
+async def _apply_referral_bonus(db: aiosqlite.Connection, referral_code: str, new_user_id: int) -> None:
+    """Credit +5 to both the referrer and the new user."""
+    cursor = await db.execute(
+        "SELECT id FROM users WHERE referral_code = ?", (referral_code,)
+    )
+    referrer = await cursor.fetchone()
+    if referrer:
+        referrer_id = referrer[0]
+        # Credit referrer
+        await db.execute(
+            "UPDATE users SET credits = credits + 5 WHERE id = ?", (referrer_id,)
+        )
+        # Credit new user
+        await db.execute(
+            "UPDATE users SET credits = credits + 5, referred_by = ? WHERE id = ?",
+            (referrer_id, new_user_id)
+        )
+        print(f"[OK] Referral bonus: +5 to user {referrer_id} and +5 to user {new_user_id}")
+
 
 def _make_tokens(user_id: int, user_row: dict) -> TokenResponse:
     """Build a TokenResponse for a given user."""
@@ -57,22 +96,30 @@ async def signup(body: UserCreate, db: aiosqlite.Connection = Depends(get_db)):
         )
 
     hashed = hash_password(body.password)
+    referral_code = await _get_unique_referral_code(db)
+    
     cursor = await db.execute(
-        "INSERT INTO users (name, email, hashed_password) VALUES (?, ?, ?)",
-        (body.name, body.email, hashed),
+        "INSERT INTO users (name, email, hashed_password, referral_code) VALUES (?, ?, ?, ?)",
+        (body.name, body.email, hashed, referral_code),
     )
     await db.commit()
     user_id = cursor.lastrowid
 
+    # Apply referral bonus if a code was provided
+    if body.referral_code:
+        await _apply_referral_bonus(db, body.referral_code.strip().upper(), user_id)
+        await db.commit()
+
     # Fetch the created user
     cursor = await db.execute(
-        "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at FROM users WHERE id = ?", (user_id,)
+        "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at, referral_code FROM users WHERE id = ?", (user_id,)
     )
     row = await cursor.fetchone()
     user_dict = {
         "id": row[0], "name": row[1], "email": row[2], 
         "plan_type": row[3], "credits": row[4], 
-        "plan_expires_at": row[5], "created_at": row[6]
+        "plan_expires_at": row[5], "created_at": row[6],
+        "referral_code": row[7],
     }
 
     print(f"[OK] New user registered: {body.email}")
@@ -85,7 +132,7 @@ async def signup(body: UserCreate, db: aiosqlite.Connection = Depends(get_db)):
 async def login(body: UserLogin, db: aiosqlite.Connection = Depends(get_db)):
     """Authenticate a user and return tokens."""
     cursor = await db.execute(
-        "SELECT id, name, email, hashed_password, plan_type, credits, plan_expires_at, created_at FROM users WHERE email = ?",
+        "SELECT id, name, email, hashed_password, plan_type, credits, plan_expires_at, created_at, referral_code FROM users WHERE email = ?",
         (body.email,),
     )
     row = await cursor.fetchone()
@@ -99,7 +146,8 @@ async def login(body: UserLogin, db: aiosqlite.Connection = Depends(get_db)):
     user_dict = {
         "id": row[0], "name": row[1], "email": row[2],
         "plan_type": row[4], "credits": row[5],
-        "plan_expires_at": row[6], "created_at": row[7]
+        "plan_expires_at": row[6], "created_at": row[7],
+        "referral_code": row[8],
     }
     print(f"[OK] User logged in: {body.email}")
     return _make_tokens(row[0], user_dict)
@@ -119,7 +167,7 @@ async def refresh_token(body: TokenRefresh, db: aiosqlite.Connection = Depends(g
 
     user_id = payload.get("sub")
     cursor = await db.execute(
-        "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at FROM users WHERE id = ?",
+        "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at, referral_code FROM users WHERE id = ?",
         (int(user_id),),
     )
     row = await cursor.fetchone()
@@ -132,7 +180,8 @@ async def refresh_token(body: TokenRefresh, db: aiosqlite.Connection = Depends(g
     user_dict = {
         "id": row[0], "name": row[1], "email": row[2],
         "plan_type": row[3], "credits": row[4],
-        "plan_expires_at": row[5], "created_at": row[6]
+        "plan_expires_at": row[5], "created_at": row[6],
+        "referral_code": row[7],
     }
     return _make_tokens(row[0], user_dict)
 
@@ -235,30 +284,33 @@ async def google_login(body: dict, db: aiosqlite.Connection = Depends(get_db)):
         
         # Check if user exists
         cursor = await db.execute(
-            "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at FROM users WHERE email = ?", 
+            "SELECT id, name, email, plan_type, credits, plan_expires_at, created_at, referral_code FROM users WHERE email = ?", 
             (email,)
         )
         row = await cursor.fetchone()
         
         if not row:
-            # Create new user
+            # Create new user with referral code
+            referral_code = await _get_unique_referral_code(db)
             cursor = await db.execute(
-                "INSERT INTO users (name, email, hashed_password) VALUES (?, ?, ?)",
-                (name, email, "GOOGLE_AUTH_USER") # Placeholder password
+                "INSERT INTO users (name, email, hashed_password, referral_code) VALUES (?, ?, ?, ?)",
+                (name, email, "GOOGLE_AUTH_USER", referral_code)
             )
             await db.commit()
             user_id = cursor.lastrowid
             user_dict = {
                 "id": user_id, "name": name, "email": email, 
                 "plan_type": "FREE", "credits": 5, 
-                "plan_expires_at": None, "created_at": None
+                "plan_expires_at": None, "created_at": None,
+                "referral_code": referral_code,
             }
         else:
             user_id = row[0]
             user_dict = {
                 "id": row[0], "name": row[1], "email": row[2],
                 "plan_type": row[3], "credits": row[4],
-                "plan_expires_at": row[5], "created_at": row[6]
+                "plan_expires_at": row[5], "created_at": row[6],
+                "referral_code": row[7],
             }
             
         print(f"[OK] Google Login: {email}")

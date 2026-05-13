@@ -8,6 +8,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/image_upload_card.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/error_card.dart';
+import '../widgets/out_of_credits_sheet.dart';
 import '../utils/app_colors.dart';
 import 'result_screen.dart';
 import 'history_screen.dart';
@@ -185,10 +186,16 @@ class HomeScreen extends StatelessWidget {
                       text: "Step 4: Generate Try-On",
                       isLoading: provider.isLoading,
                       onPressed: () async {
-                        final historyProvider =
-                            Provider.of<HistoryProvider>(context, listen: false);
+                        // Check credits before processing
                         final authProvider =
                             Provider.of<AuthProvider>(context, listen: false);
+                        if ((authProvider.currentUser?.credits ?? 0) <= 0) {
+                          OutOfCreditsSheet.show(context);
+                          return;
+                        }
+
+                        final historyProvider =
+                            Provider.of<HistoryProvider>(context, listen: false);
                         bool success = await provider.processTryOn(
                           historyProvider: historyProvider,
                           authProvider: authProvider,
