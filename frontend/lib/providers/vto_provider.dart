@@ -46,6 +46,7 @@ class VtoProvider with ChangeNotifier {
         AndroidUiSettings(
           toolbarTitle: 'Crop Image',
           toolbarColor: AppColors.surface,
+          statusBarColor: Colors.black, // Fixes overlap with device status bar icons
           toolbarWidgetColor: Colors.white,
           initAspectRatio: CropAspectRatioPreset.original,
           lockAspectRatio: false,

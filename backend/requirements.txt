@@ -14,3 +14,5 @@ aiosqlite
 fastapi-mail
 google-auth
 resend
+google-api-python-client
+google-auth-httplib2

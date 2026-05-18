@@ -9,6 +9,7 @@ import 'utils/app_colors.dart';
 import 'services/encryption_service.dart';
 
 import 'providers/favorites_provider.dart';
+import 'providers/iap_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => VtoProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+        ChangeNotifierProvider(create: (_) => IAPProvider()),
         ChangeNotifierProvider(create: (_) {
           final sp = SettingsProvider();
           sp.loadPreferences();

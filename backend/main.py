@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.api.routes import router as api_router
 from app.api.auth_routes import auth_router
-from app.api.payment_routes import payment_router
 from app.database import init_db
 import os
 
@@ -33,7 +32,6 @@ app.add_middleware(
 
 # Include routes
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(payment_router, prefix="/api/payment", tags=["Payments"])
 app.include_router(api_router, prefix="/api", tags=["Virtual Try-On"])
 
 

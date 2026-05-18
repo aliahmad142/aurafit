@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/iap_provider.dart';
 import '../utils/constants.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/fade_in_slide.dart';
-import 'checkout_webview.dart';
 
 class PricingScreen extends StatelessWidget {
   const PricingScreen({super.key});
@@ -24,53 +24,77 @@ class PricingScreen extends StatelessWidget {
       ),
       body: AnimatedBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Column(
-              children: [
-                const FadeInSlide(
-                  child: Text(
-                    "Choose Your Plan",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
+          child: Consumer<IAPProvider>(
+            builder: (context, iap, child) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Column(
+                  children: [
+                    const FadeInSlide(
+                      child: Text(
+                        "Choose Your Plan",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    FadeInSlide(
+                      delay: const Duration(milliseconds: 100),
+                      child: Text(
+                        "Unlock more try-ons with our premium passes",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    _buildPlanCard(
+                      context,
+                      title: "Free Tier",
+                      price: "0.00",
+                      description: "Perfect for testing",
+                      features: ["5 Try-ons per month", "Standard Speed", "Community Support"],
+                      isCurrent: true,
+                      isPopular: false,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildPlanCard(
+                      context,
+                      title: "Daily Pass",
+                      price: iap.products.isNotEmpty 
+                        ? iap.products.firstWhere((p) => p.id == IAPProvider.dailyPassId).price 
+                        : "1.00",
+                      description: "Best for shopping days",
+                      features: ["10 Try-ons for 24 hours", "Priority Processing", "HD Quality Support"],
+                      isCurrent: false,
+                      isPopular: true,
+                      isLoading: iap.isLoading,
+                      onTap: () {
+                        if (iap.products.isNotEmpty) {
+                          final product = iap.products.firstWhere((p) => p.id == IAPProvider.dailyPassId);
+                          iap.buyProduct(product);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Products not available. Please try again later.")),
+                          );
+                        }
+                      },
+                    ),
+                    if (iap.errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Text(
+                          iap.errorMessage!,
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                FadeInSlide(
-                  delay: const Duration(milliseconds: 100),
-                  child: Text(
-                    "Unlock more try-ons with our premium passes",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16),
-                  ),
-                ),
-                const SizedBox(height: 40),
-                _buildPlanCard(
-                  context,
-                  title: "Free Tier",
-                  price: "0.00",
-                  description: "Perfect for testing",
-                  features: ["5 Try-ons per month", "Standard Speed", "Community Support"],
-                  isCurrent: true,
-                  isPopular: false,
-                ),
-                const SizedBox(height: 24),
-                _buildPlanCard(
-                  context,
-                  title: "Daily Pass",
-                  price: "3.79",
-                  description: "Best for shopping days",
-                  features: ["10 Try-ons for 24 hours", "Priority Processing", "HD Quality Support"],
-                  isCurrent: false,
-                  isPopular: true,
-                  onTap: () => _showPaymentOptions(context),
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -85,6 +109,7 @@ class PricingScreen extends StatelessWidget {
     required List<String> features,
     bool isCurrent = false,
     bool isPopular = false,
+    bool isLoading = false,
     VoidCallback? onTap,
   }) {
     return FadeInSlide(
@@ -121,8 +146,8 @@ class PricingScreen extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Text("\$", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                Text(price, style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.w900)),
+                if (!price.contains('\$')) const Text("\$", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(price, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
                 Text(
                   isPopular ? "/day" : "/mo",
                   style: const TextStyle(color: Colors.white54, fontSize: 16),
@@ -150,7 +175,7 @@ class PricingScreen extends StatelessWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: isCurrent ? null : onTap,
+                onPressed: (isCurrent || isLoading) ? null : onTap,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isPopular ? const Color(0xFF7C5CFF) : Colors.white10,
                   foregroundColor: Colors.white,
@@ -158,86 +183,14 @@ class PricingScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
-                child: Text(
-                  isCurrent ? "Current Plan" : "Get Started",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+                child: isLoading 
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(
+                      isCurrent ? "Current Plan" : "Get Started",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPaymentOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF0B1020),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Select Payment Method",
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 24),
-              _paymentMethodTile(context, "PayFast Pakistan", "JazzCash, EasyPaisa, Cards", Icons.payment_rounded, true),
-              const SizedBox(height: 12),
-              _paymentMethodTile(context, "JazzCash Mobile Account", "Direct from your mobile", Icons.account_balance_wallet_rounded, false),
-              const SizedBox(height: 12),
-              _paymentMethodTile(context, "EasyPaisa Wallet", "Fast & Secure", Icons.wallet_rounded, false),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _paymentMethodTile(BuildContext context, String name, String subtitle, IconData icon, bool isPayFast) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const PayFastCheckoutScreen(plan: "DAILY_PASS"),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: const Color(0xFF7C5CFF), size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 16),
           ],
         ),
       ),

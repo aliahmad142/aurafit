@@ -98,7 +98,9 @@ class VTOService:
 
             if prediction.status != "completed":
                 error_msg = prediction.error.message if prediction.error else "Unknown error"
-                raise Exception(f"Fashn.ai Prediction failed with status '{prediction.status}': {error_msg}")
+                print(f"  → Fashn.ai failed: {error_msg}")
+                friendly_msg = self._get_friendly_error(error_msg)
+                raise Exception(friendly_msg)
 
             # Fashn returns a list of output URLs
             output_url = prediction.output[0]
@@ -124,8 +126,26 @@ class VTOService:
             traceback.print_exc()
             return {
                 "success": False,
-                "message": f"Error during VTO processing: {str(e)}",
+                "message": str(e),
             }
+
+    @staticmethod
+    def _get_friendly_error(raw_error: str) -> str:
+        """Convert technical Fashn.ai errors into simple, user-friendly messages."""
+        raw = raw_error.lower()
+
+        if "body pose" in raw or "detect body" in raw:
+            return "We couldn't detect a person in your photo. Please use a clear photo showing your upper body or full body."
+        if "garment" in raw:
+            return "We couldn't detect the clothing item. Please use a clear photo of the garment on a flat surface or mannequin."
+        if "nsfw" in raw or "inappropriate" in raw:
+            return "This image cannot be processed. Please use an appropriate photo."
+        if "timeout" in raw or "timed out" in raw:
+            return "The server took too long to respond. Please try again in a moment."
+        if "rate limit" in raw:
+            return "Too many requests. Please wait a moment and try again."
+
+        return f"Something went wrong while generating your try-on. Please try again with a different photo."
 
 
 vto_service = VTOService()

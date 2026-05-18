@@ -93,6 +93,21 @@ class AuthService {
     }
   }
 
+  Future<User?> verifyGooglePurchase(String productId, String token) async {
+    try {
+      final response = await _dio.post('/api/payment/verify-google-purchase', data: {
+        'product_id': productId,
+        'purchase_token': token,
+      });
+      final user = User.fromJson(response.data);
+      await _saveUser(user.toJson());
+      return user;
+    } on DioException catch (e) {
+      print("Backend Verification Failed: ${e.response?.data}");
+      return null;
+    }
+  }
+
   // ─── Token Management ──────────────────────────────────────────
 
   Future<String?> getAccessToken() => _storage.read(key: _accessTokenKey);
